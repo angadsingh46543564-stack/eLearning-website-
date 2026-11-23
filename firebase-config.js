@@ -1,0 +1,2 @@
+// Firebase web app configuration (public identifiers, safe to keep in front-end code)
+const FIREBASE_CONFIG = { apiKey:"AIzaSyCQkE72_VO_ATMY9ux1MGa-OHAxwAtBmtI", authDomain:"elearning-website-1c2a1.firebaseapp.com", projectId:"elearning-website-1c2a1", storageBucket:"elearning-website-1c2a1.firebasestorage.app", messagingSenderId:"839304524206", appId:"1:839304524206:web:3860060f9f39ccfb2c983f" };

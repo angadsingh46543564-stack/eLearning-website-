@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // EduSphere keeps its own users table (no Firebase Auth yet), so these
+    // collections must be open. Everything else stays locked.
+    match /edu_{col}/{doc} {
+      allow read, write: if true;
+    }
+  }
+}

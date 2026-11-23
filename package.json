@@ -1,0 +1,10 @@
+{
+  "name": "edusphere",
+  "version": "1.0.0",
+  "description": "EduSphere - E-Learning Website Management System",
+  "private": true,
+  "scripts": {
+    "deploy": "firebase deploy",
+    "serve": "firebase serve --only hosting"
+  }
+}
