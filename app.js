@@ -1,4 +1,4 @@
-/*
+ /*
   EduSphere - E-Learning Website Management System
   Demo frontend build. Developed by: Angad Singh
   B.Tech CSE, 5th Semester | I.K. Gujral Punjab Technical University (PTU), Jalandhar
@@ -29,13 +29,13 @@ function makeClaudeSb(db){
   const col=t=>db.collection('edu_'+t);
   const strip=(t,r)=>{ r=JSON.parse(JSON.stringify(r)); if(t==='courses'&&r.lessons) r.lessons=r.lessons.map(l=>(l.content&&(LESSON_NOTES[l.title]===l.content||isGenericNotes(l)))?{...l,content:null}:l); return r; };
   const unstrip=(t,r)=>{ if(t==='courses'&&r.lessons) r.lessons=r.lessons.map(l=>l.content?l:{...l,content:LESSON_NOTES[l.title]||`Video lecture: ${l.title} (${l.level||'Basic'} level). Watch the full lecture, then mark this lesson as completed.`}); return r; };
-  const all=async t=>{ const snap=await col(t).get(); return snap.docs.map(d=>{ const r=d.data(); cache[t+'/'+d.id]=JSON.stringify(strip(t,unstrip(t,JSON.parse(JSON.stringify(r))))); return unstrip(t,r); }); };
+  const all=async t=>{ const snap=await Promise.race([col(t).get(),new Promise((_,j)=>setTimeout(()=>j(new Error('backend timeout')),7000))]); return snap.docs.map(d=>{ const r=d.data(); cache[t+'/'+d.id]=JSON.stringify(strip(t,unstrip(t,JSON.parse(JSON.stringify(r))))); return unstrip(t,r); }); };
   return { from:t=>({
     select(cols){ const b={ f:null, eq(k,v){ b.f=[k,v]; return b; },
       async run(){ try{ let rows=await all(t); if(b.f) rows=rows.filter(r=>r[b.f[0]]===b.f[1]); if(cols&&cols!=='*') rows=rows.map(r=>({[cols]:r[cols]})); return {data:rows,error:null}; }catch(e){ return {data:null,error:e}; } },
       async maybeSingle(){ const r=await b.run(); return {data:(r.data&&r.data[0])||null,error:r.error}; },
       then(a,c){ return b.run().then(a,c); } }; return b; },
-    async upsert(rows){ for(const r of [].concat(rows)){ const id=String(r.id||r.key); const s=strip(t,r), j=JSON.stringify(s); if(cache[t+'/'+id]===j) continue; await col(t).doc(id).set(s); cache[t+'/'+id]=j; } return {error:null}; },
+    async upsert(rows){ for(const r of [].concat(rows)){ const id=String(r.id||r.key); const s=strip(t,r), j=JSON.stringify(s); if(cache[t+'/'+id]===j) continue; await Promise.race([col(t).doc(id).set(s),new Promise((_,j)=>setTimeout(()=>j(new Error('backend timeout')),10000))]); cache[t+'/'+id]=j; } return {error:null}; },
     delete(){ return { async in(k,ids){ for(const id of ids){ await col(t).doc(String(id)).delete(); delete cache[t+'/'+id]; } return {error:null}; } }; }
   }) };
 }
@@ -44,7 +44,7 @@ function initFirebaseBackend(){
   try{
     if(!window.firebase || !firebase.initializeApp || !firebase.firestore) return false;
     if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-    sb = makeClaudeSb(firebase.firestore()); BACKEND='firebase'; return true;
+    const fsdb=firebase.firestore(); try{ fsdb.settings({experimentalAutoDetectLongPolling:true,merge:true}); }catch(e){} sb = makeClaudeSb(fsdb); BACKEND='firebase'; return true;
   }catch(e){ console.warn('Firebase init failed', e); return false; }
 }
 async function initClaudeBackend(){
@@ -1617,7 +1617,8 @@ async function sendAiChat(){
 (async function boot(){
   await initClaudeBackend();
   if(BACKEND!=='claude') initFirebaseBackend();
-  DB = await loadDBAsync();
+  DB = await Promise.race([loadDBAsync().catch(e=>{ console.warn('Backend load failed, using local data',e); return null; }), new Promise(r=>setTimeout(()=>r(null),12000))]);
+  if(!DB){ sb=null; DB = upgradeCurriculum(loadDB()); }
   DB.assignments = DB.assignments || []; DB.submissions = DB.submissions || [];
   DB.wishlist = DB.wishlist || [];
   DB.users.forEach(ensureGam);
