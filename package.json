@@ -1,10 +1,13 @@
-{
-  "name": "edusphere",
-  "version": "1.0.0",
-  "description": "EduSphere - E-Learning Website Management System",
-  "private": true,
-  "scripts": {
-    "deploy": "firebase deploy",
-    "serve": "firebase serve --only hosting"
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Allow access only to collections starting with edu_
+    match /{collection}/{doc} {
+      allow read, write: if collection.matches('edu_.*');
+    }
+
   }
 }
